@@ -11,7 +11,7 @@ Follow these steps to execute load tests on your local machine:
 Using another terminal tab, This is suggested to avoid conflicts with the existing application python environment.
 
 ```commandline
-python3 -m venv locust_env && source locust_env/bin/activate && pip install locust==2.31.1 "google-cloud-aiplatform[evaluation,langchain,reasoningengine]>=1.77.0"
+python3 -m venv locust_env && source locust_env/bin/activate && pip install locust==2.31.1 "google-cloud-aiplatform[langchain,reasoningengine]>=1.77.0"
 ```
 
 **3. Execute the Load Test:**
