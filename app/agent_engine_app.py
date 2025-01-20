@@ -33,7 +33,8 @@ class AgentEngineApp:
 
         logging_client = google_cloud_logging.Client()
         self.logger = logging_client.logger(__name__)
-        # Initialize Traceloop
+        
+        # Initialize Telemetry
         try:
             Traceloop.init(
             app_name="Sample Chatbot Application",
