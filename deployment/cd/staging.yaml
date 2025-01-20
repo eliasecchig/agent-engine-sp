@@ -25,10 +25,10 @@ steps:
     args:
       - "-c"
       - |
-        python -m uv pip install locust==2.32.6
+        pip install locust==2.32.6 "google-cloud-aiplatform[reasoningengine]==1.77.0"
         python -m locust -f tests/load_test/load_test.py \
         --headless \
-        -t 30s -u 10 -r 0.5 \ 
+        -t 30s -u 10 -r 0.5 \
         --csv=tests/load_test/.results/results \
         --html=tests/load_test/.results/report.html
 
