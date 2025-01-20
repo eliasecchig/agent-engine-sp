@@ -30,18 +30,27 @@ resource "google_project_iam_member" "other_projects_roles" {
   member     = "serviceAccount:${resource.google_service_account.cicd_runner_sa.email}"
   depends_on = [resource.google_project_service.cicd_services, resource.google_project_service.shared_services]
 }
+resource "google_project_service_identity" "vertex_sa" {
+  for_each = local.deploy_project_ids
+  provider = google-beta
+  project  = each.value
+  service  = "aiplatform.googleapis.com"
+}
 
 # Grant required permissions to Vertex AI service account
 resource "google_project_iam_member" "vertex_ai_sa_permissions" {
   for_each = {
-    for pair in setproduct(keys(local.project_ids), var.agentengine_sa_roles) :
-    join(",", pair) => pair[1]
+    for pair in setproduct(keys(local.deploy_project_ids), var.agentengine_sa_roles) :
+    "${pair[0]}_${pair[1]}" => {
+      project = local.deploy_project_ids[pair[0]]
+      role = pair[1]
+    }
   }
 
-  project = var.dev_project_id
-  role    = each.value
-  member  = google_project_service_identity.vertex_sa.member
-  depends_on = [resource.google_project_service.services]
+  project     = each.value.project
+  role        = each.value.role
+  member      = "serviceAccount:${google_project_service_identity.vertex_sa[split("_", each.key)[0]].email}"
+  depends_on  = [resource.google_project_service.shared_services]
 }
 
 # Special assignment: Allow the CICD SA to create tokens

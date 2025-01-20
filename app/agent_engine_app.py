@@ -127,6 +127,9 @@ def deploy_agent_engine_app():
         _, project = google.auth.default()
     
     LOCATION = os.getenv("LOCATION", "us-central1")
+    
+    logging.info(f"Deploying agent engine app to project: {project}")
+    logging.info(f"Using location: {LOCATION}")
     staging_bucket = f"gs://{project}-agent-engine"
 
     create_bucket_if_not_exists(
