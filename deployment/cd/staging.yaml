@@ -25,7 +25,7 @@ steps:
     args:
       - "-c"
       - |
-        python -m uv pip install locust==2.32.6
+        python -m uv add locust==2.32.6
         python -m uv run locust -f tests/load_test/load_test.py \
         --headless \
         -t 30s -u 10 -r 0.5 \
