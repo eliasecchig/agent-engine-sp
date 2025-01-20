@@ -17,3 +17,10 @@ resource "google_project_service" "shared_services" {
   service            = each.value.service
   disable_on_destroy = false
 }
+
+resource "google_project_service_identity" "vertex_sa" {
+  for_each = all_project_ids
+  provider = google-beta
+  project = var.dev_project_id
+  service = "aiplatform.googleapis.com"
+}

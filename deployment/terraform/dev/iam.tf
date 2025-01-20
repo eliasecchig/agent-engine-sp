@@ -23,14 +23,12 @@ resource "google_project_iam_member" "default_compute_sa_storage_object_creator"
 resource "google_project_iam_member" "vertex_ai_sa_permissions" {
   for_each = {
     for pair in setproduct(keys(local.project_ids), var.agentengine_sa_roles) :
-    join(",", pair) => {
-      project = local.project_ids[pair[0]]
-      role    = pair[1]
-    }
+    join(",", pair) => pair[1]
   }
 
   project = var.dev_project_id
   role    = each.value
-  member  = "serviceAccount:service-${data.google_project.dev_project.number}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+  member  = google_project_service_identity.vertex_sa.member
   depends_on = [resource.google_project_service.services]
 }
+

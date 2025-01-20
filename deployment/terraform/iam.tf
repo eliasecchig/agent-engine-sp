@@ -31,19 +31,16 @@ resource "google_project_iam_member" "other_projects_roles" {
   depends_on = [resource.google_project_service.cicd_services, resource.google_project_service.shared_services]
 }
 
-# 3. Grant required permissions to Vertex AI service account
+# Grant required permissions to Vertex AI service account
 resource "google_project_iam_member" "vertex_ai_sa_permissions" {
   for_each = {
     for pair in setproduct(keys(local.project_ids), var.agentengine_sa_roles) :
-    join(",", pair) => {
-      project = local.project_ids[pair[0]]
-      role    = pair[1]
-    }
+    join(",", pair) => pair[1]
   }
 
   project = var.dev_project_id
   role    = each.value
-  member  = "serviceAccount:service-${data.google_project.dev_project.number}@gcp-sa-aiplatform-re.iam.gserviceaccount.com"
+  member  = google_project_service_identity.vertex_sa.member
   depends_on = [resource.google_project_service.services]
 }
 
