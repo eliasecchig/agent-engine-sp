@@ -1,0 +1,29 @@
+steps:
+  # Install uv package manager and sync dependencies
+  - name: "python:3.11"
+    id: install-dependencies
+    entrypoint: /bin/bash
+    args:
+      - "-c"
+      - |
+        pip install uv --user &&  python -m uv sync
+
+  # Run unit tests using pytest
+  - name: "python:3.11"
+    id: unit-tests
+    entrypoint: /bin/bash
+    args:
+      - "-c"
+      - |
+        python -m uv run pytest tests/unit
+
+  # Run integration tests
+  - name: "python:3.11"
+    id: integration-tests
+    entrypoint: /bin/bash
+    args:
+      - "-c"
+      - |
+        python -m uv run pytest tests/integration
+options:
+  logging: CLOUD_LOGGING_ONLY
