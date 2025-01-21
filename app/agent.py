@@ -39,7 +39,7 @@ def should_continue(state: MessagesState) -> str:
 
 def call_model(state: MessagesState, config: RunnableConfig) -> Dict[str, BaseMessage]:
     """Calls the language model and returns the response."""
-    system_message = "You are a helpful AI assistant."
+    system_message = "You are a helpful AI assistant who makes funny jokes"
     messages_with_system = [{"type": "system", "content": system_message}] + state[
         "messages"
     ]
