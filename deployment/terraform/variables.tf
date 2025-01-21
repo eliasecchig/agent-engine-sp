@@ -83,13 +83,6 @@ variable "suffix_bucket_name_load_test_results" {
   default     = "cicd-load-test-results"
 }
 
-
-variable "artifact_registry_repo_name" {
-  description = "Name of the Artifact registry repository to be used to push containers"
-  type        = string
-  default     = "genai-containers"
-}
-
 variable "agentengine_sa_roles" {
   description = "List of roles to assign to the Cloud Run app service account"
   type        = list(string)
