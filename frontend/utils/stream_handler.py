@@ -129,36 +129,40 @@ class EventProcessor:
         )
 
         for event in stream:
-            # Handle agent events
-            
-            if "agent" in event:
-                message = event["agent"]["messages"]
-                if message["kwargs"].get("tool_calls"):
-                    # Handle tool call
-                    tool_calls = message["kwargs"]["tool_calls"]
-                    ai_message = AIMessage(content="", tool_calls=tool_calls)
-                    self.tool_calls.append(ai_message.model_dump())
-                    for tool_call in tool_calls:
-                        msg = f"\n\nCalling tool: `{tool_call['name']}` with args: `{tool_call['args']}`"
-                    self.stream_handler.new_status(msg)
-                elif content := message["kwargs"].get("content"):
-                    # Handle AI response
-                    self.final_content += content
-                    self.stream_handler.new_token(content)
+            # Each event is a list with message and metadata
+            for chunk in event:
+                if not isinstance(chunk, dict) or 'type' not in chunk:
+                    continue
+                    
+                if chunk['type'] == 'constructor':
+                    message = chunk['kwargs']
+                    
+                    # Handle tool calls
+                    if message.get('tool_calls'):
+                        tool_calls = message['tool_calls']
+                        ai_message = AIMessage(content="", tool_calls=tool_calls)
+                        self.tool_calls.append(ai_message.model_dump())
+                        for tool_call in tool_calls:
+                            msg = f"\n\nCalling tool: `{tool_call['name']}` with args: `{tool_call['args']}`"
+                            self.stream_handler.new_status(msg)
+                            
+                    # Handle tool responses
+                    elif message.get('tool_call_id'):
+                        content = message['content']
+                        tool_call_id = message['tool_call_id']
+                        tool_message = ToolMessage(
+                            content=content,
+                            type="tool", 
+                            tool_call_id=tool_call_id
+                        ).model_dump()
+                        self.tool_calls.append(tool_message)
+                        msg = f"\n\nTool response: `{content}`"
+                        self.stream_handler.new_status(msg)
                         
-            # Handle tool response events
-            elif "tools" in event:
-                for tool_message in event["tools"]["messages"]:
-                    content = tool_message["kwargs"]["content"]
-                    tool_call_id = tool_message["kwargs"]["tool_call_id"]
-                    tool_message = ToolMessage(
-                        content=content,
-                        type="tool",
-                        tool_call_id=tool_call_id
-                    ).model_dump()
-                    self.tool_calls.append(tool_message)
-                    msg = f"\n\nTool response: `{content}`"
-                    self.stream_handler.new_status(msg)
+                    # Handle AI responses
+                    elif content := message.get('content'):
+                        self.final_content += content
+                        self.stream_handler.new_token(content)
 
         # Handle end of stream
         if self.final_content:

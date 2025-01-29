@@ -78,8 +78,9 @@ class AgentEngineApp:
         **kwargs,
     ) -> Iterable[Any]:
         self._set_tracing_properties(input=input, config=config)
-        for chunk in self.runnable.stream(input=input, config=config, **kwargs):
+        for chunk in self.runnable.stream(input=input, config=config, **kwargs, stream_mode="messages"):
             dumped_chunk = langchain_load_dump.dumpd(chunk)
+            print(dumped_chunk)
             yield dumped_chunk
 
     def register_feedback(self,feedback: dict):
@@ -128,7 +129,6 @@ def deploy_agent_engine_app():
         _, project = google.auth.default()
     
     LOCATION = os.getenv("LOCATION", "us-central1")
-    
     logging.info(f"Deploying agent engine app to project: {project}")
     logging.info(f"Using location: {LOCATION}")
     staging_bucket = f"gs://{project}-agent-engine"
@@ -150,14 +150,32 @@ def deploy_agent_engine_app():
 
     agent = AgentEngineApp(project_id=project)
     
-    # Create and return reasoning engine
-    remote_agent = reasoning_engines.ReasoningEngine.create(
-        agent,
-        requirements=requirements,
-        display_name="Reasoning Engine with LangGraph",
-        description="This is a sample custom application in Reasoning Engine that uses LangGraph",
-        extra_packages=["./app"]
+    # Name of the agent engine we'll create or update
+    AGENT_NAME = "agent_engine_sample"
+
+    # Common configuration for both create and update operations
+    agent_config = {
+        "reasoning_engine": agent,
+        "requirements": requirements, 
+        "display_name": AGENT_NAME,
+        "description": "This is a sample custom application in Reasoning Engine that uses LangGraph",
+        "extra_packages": ["./app"]
+    }
+
+    # Check if an agent with this name already exists
+    existing_agents = reasoning_engines.ReasoningEngine.list(
+        filter=f"display_name={AGENT_NAME}"
     )
+
+    if existing_agents:
+        # Update the existing agent with new configuration
+        logging.info(f"Updating existing agent: {AGENT_NAME}")
+        remote_agent = existing_agents[0].update(**agent_config)
+    else:
+        # Create a new agent if none exists
+        logging.info(f"Creating new agent: {AGENT_NAME}")
+        remote_agent = reasoning_engines.ReasoningEngine.create(**agent_config)
+
 
     config = {
         "remote_agent_engine_id": remote_agent.resource_name,
