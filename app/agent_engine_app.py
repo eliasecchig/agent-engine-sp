@@ -1,20 +1,21 @@
-from langchain_core.runnables import RunnableConfig
-from typing import Any, Iterable, Mapping, Optional, Union, Literal, Sequence
-from langchain.load import dump as langchain_load_dump
-from vertexai.preview import reasoning_engines
-import tomli
-from pydantic import BaseModel
-from google.cloud import logging as google_cloud_logging
-from traceloop.sdk import Instruments, Traceloop
-from app.utils.tracing import CloudTraceLoggingSpanExporter
-import logging 
-import vertexai
-import google.auth
-import os
 import datetime
-from app.utils.gcs import create_bucket_if_not_exists
 import json
 import logging
+import os
+import subprocess
+
+import google.auth
+import vertexai
+from google.cloud import logging as google_cloud_logging
+from langchain.load import dump as langchain_load_dump
+from langchain_core.runnables import RunnableConfig
+from pydantic import BaseModel
+from traceloop.sdk import Instruments, Traceloop
+from typing import Any, Iterable, Literal, Mapping, Optional, Sequence, Union
+
+from app.utils.gcs import create_bucket_if_not_exists
+from app.utils.tracing import CloudTraceLoggingSpanExporter
+from vertexai.preview import reasoning_engines
 
 logging.basicConfig(
     level=logging.INFO,
@@ -143,10 +144,17 @@ def deploy_agent_engine_app():
         location=LOCATION,
         staging_bucket=staging_bucket
     )
-
-    # Load requirements from pyproject.toml
-    with open("pyproject.toml", "rb") as f:
-        requirements = tomli.load(f)["project"]["dependencies"]
+    
+    # Export requirements from uv.lock file, stripping hashes and other metadata
+    # to get a clean list of package requirements
+    requirements = subprocess.check_output([
+        "uv", "export",
+        "--no-hashes",
+        "--no-sources", 
+        "--no-header",
+        "--no-emit-project",
+        "--locked"
+    ], text=True).strip().split("\n")
 
     agent = AgentEngineApp(project_id=project)
     
