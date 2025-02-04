@@ -19,7 +19,7 @@ The application leverages [**Terraform**](http://terraform.io) to define and pro
 
    - Triggered on merge to `main` branch
    - Builds and pushes application to Artifact Registry
-   - Deploys to staging environment (Cloud Run)
+   - Deploys to staging environment
    - Performs load testing
 
 3. Production Deployment (`deployment/cd/deploy-to-prod.yaml`):
@@ -98,7 +98,7 @@ For End-to-end testing of the application, including tracing and feedback sinkin
 First, enable required Google Cloud APIs:
 
 ```bash
-gcloud config set project $YOUR_DEV_PROJECT
+gcloud config set project <your-dev-project-id>
 gcloud services enable serviceusage.googleapis.com cloudresourcemanager.googleapis.com
 ```
 
@@ -113,7 +113,7 @@ terraform apply --var-file vars/env.tfvars
 Then deploy the application using the following command (from the root of the repository):
 
 ```bash
-gcloud run deploy genai-app-sample --source . --project $YOUR_DEV_PROJECT_ID --service-account genai-app-sample-cr-sa@$YOUR_DEV_PROJECT_ID.iam.gserviceaccount.com
+make backend
 ```
 
 ### End-to-end Demo video

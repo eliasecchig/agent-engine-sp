@@ -71,12 +71,6 @@ variable "cicd_runner_sa_name" {
   default     = "cicd-runner"
 }
 
-variable "cloud_run_app_sa_name" {
-  description = "Service account name to be used for the Cloud Run service"
-  type        = string
-  default     = "genai-app-sample-cr-sa"
-}
-
 variable "suffix_bucket_name_load_test_results" {
   description = "Suffix Name of the bucket that will be used to store the results of the load test. Prefix will be project id."
   type        = string
@@ -84,7 +78,7 @@ variable "suffix_bucket_name_load_test_results" {
 }
 
 variable "agentengine_sa_roles" {
-  description = "List of roles to assign to the Cloud Run app service account"
+  description = "List of roles to assign to the Agent Engine service account"
   type        = list(string)
   default = [
     "roles/aiplatform.user",

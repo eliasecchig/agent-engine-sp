@@ -11,11 +11,19 @@ from langchain.load import dump as langchain_load_dump
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel
 from traceloop.sdk import Instruments, Traceloop
-from typing import Any, Iterable, Literal, Mapping, Optional, Sequence, Union
+from typing import (
+    Any,
+    Iterable,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Union,
+)
+from vertexai.preview import reasoning_engines
 
 from app.utils.gcs import create_bucket_if_not_exists
 from app.utils.tracing import CloudTraceLoggingSpanExporter
-from vertexai.preview import reasoning_engines
 
 logging.basicConfig(
     level=logging.INFO,
@@ -189,7 +197,7 @@ def deploy_agent_engine_app():
         "remote_agent_engine_id": remote_agent.resource_name,
         "deployment_timestamp": datetime.datetime.now().isoformat()
     }
-    config_file = ".agent_deployment.json"
+    config_file = "deployment_metadata.json"
 
     with open(config_file, "w") as f:
         json.dump(config, f, indent=2)

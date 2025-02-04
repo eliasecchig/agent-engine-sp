@@ -46,7 +46,7 @@ variable "feedback_sink_name" {
 }
 
 variable "agentengine_sa_roles" {
-  description = "List of roles to assign to the Cloud Run app service account"
+  description = "List of roles to assign to the Agent Engine app service account"
   type        = list(string)
   default = [
     "roles/aiplatform.user",

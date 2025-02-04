@@ -1,4 +1,3 @@
-
 MARKDOWN_STR = """
 <style>
 button[kind="primary"] {

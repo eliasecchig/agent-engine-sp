@@ -4,26 +4,38 @@ This directory provides a comprehensive load testing framework for your Generati
 
 ##  Load Testing
 
-Follow these steps to execute load tests on your local machine:
+Before running load tests, ensure you have deployed the backend remotely.
 
+Follow these steps to execute load tests:
 
-**2. (In another tab) Create virtual environment with Locust**
-Using another terminal tab, This is suggested to avoid conflicts with the existing application python environment.
+**1. Deploy the Backend Remotely:**
+   ```bash
+   gcloud config set project <your-dev-project-id>
+   make backend
+   ```
 
-```commandline
-python3 -m venv locust_env && source locust_env/bin/activate && pip install locust==2.31.1 "google-cloud-aiplatform[langchain,reasoningengine]>=1.77.0"
-```
+**2. Create a Virtual Environment for Locust:**
+   It's recommended to use a separate terminal tab and create a virtual environment for Locust to avoid conflicts with your application's Python environment.
+
+   ```bash
+   # Create and activate virtual environment
+   python3 -m venv locust_env
+   source locust_env/bin/activate
+   
+   # Install required packages
+   pip install locust==2.31.1 "google-cloud-aiplatform[langchain,reasoningengine]>=1.77.0"
+   ```
 
 **3. Execute the Load Test:**
-Trigger the Locust load test with the following command:
+   Trigger the Locust load test with the following command:
 
-```bash
-locust -f tests/load_test/load_test.py \
---headless \
--t 30s -u 10 -r 2 \
---csv=tests/load_test/.results/results \
---html=tests/load_test/.results/report.html
-```
+   ```bash
+   locust -f tests/load_test/load_test.py \
+   --headless \
+   -t 30s -u 10 -r 2 \
+   --csv=tests/load_test/.results/results \
+   --html=tests/load_test/.results/report.html
+   ```
 
-This command initiates a 30-second load test, simulating 2 users spawning per second, reaching a maximum of 10 concurrent users.
+   This command initiates a 30-second load test, simulating 2 users spawning per second, reaching a maximum of 10 concurrent users.
 

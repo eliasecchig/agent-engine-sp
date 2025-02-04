@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize Vertex AI and load agent config
 vertexai.init()
-with open(".agent_deployment.json") as f:
+with open("deployment_metadata.json") as f:
     remote_agent_engine_id = json.load(f)["remote_agent_engine_id"]
 logger.info("Using remote agent engine ID: %s", remote_agent_engine_id)
 agent = reasoning_engines.ReasoningEngine(remote_agent_engine_id)

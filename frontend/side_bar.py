@@ -18,8 +18,8 @@ NUM_CHAT_IN_RECENT = 3
 
 
 DEFAULT_REMOTE_AGENT_ENGINE_ID = "N/A"
-if os.path.exists(".agent_deployment.json"):
-    with open(".agent_deployment.json") as f:
+if os.path.exists("deployment_metadata.json"):
+    with open("deployment_metadata.json") as f:
         DEFAULT_REMOTE_AGENT_ENGINE_ID = json.load(f)["remote_agent_engine_id"]
 DEFAULT_AGENT_CALLABLE_PATH = "app.agent_engine_app.AgentEngineApp"
 
