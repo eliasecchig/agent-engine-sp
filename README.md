@@ -32,10 +32,11 @@ uv sync --extra jupyter --extra streamlit
 
 ### Setup
 
-Set your default Google Cloud project and region:
+If not done during the initialization, set your default Google Cloud project and Location:
 
 ```bash
 export PROJECT_ID="YOUR_PROJECT_ID"
+export LOCATION="us-central1"
 gcloud config set project $PROJECT_ID
 gcloud auth application-default login
 gcloud auth application-default set-quota-project $PROJECT_ID
@@ -80,6 +81,6 @@ The repository includes a Terraform configuration for the setup of a production 
 
 ## Monitoring and Observability
 
->> You can use a [Looker Studio dashboard](https://lookerstudio.google.com/c/reporting/fa742264-4b4b-4c56-81e6-a667dd0f853f/page/tEnnC) template for visualizing events being logged in BigQuery. See the "Setup Instructions" tab to getting started.
+>> You can use [this Looker Studio dashboard](https://lookerstudio.google.com/c/reporting/fa742264-4b4b-4c56-81e6-a667dd0f853f/page/tEnnC) template for visualizing events being logged in BigQuery. See the "Setup Instructions" tab to getting started.
 
 The application uses OpenTelemetry for comprehensive observability with all events being sent to Google Cloud Trace and Logging for monitoring and to BigQuery for long term storage. 
