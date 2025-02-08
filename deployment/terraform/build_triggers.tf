@@ -50,6 +50,7 @@ resource "google_cloudbuild_trigger" "cd_pipeline" {
   substitutions = {
     _STAGING_PROJECT_ID            = var.staging_project_id
     _BUCKET_NAME_LOAD_TEST_RESULTS = resource.google_storage_bucket.bucket_load_test_results.name
+    _ARTIFACT_REGISTRY_REPO_NAME   = var.artifact_registry_repo_name
     _CLOUD_RUN_APP_SA_NAME         = var.cloud_run_app_sa_name
     _REGION                        = var.region
     # Your other CD Pipeline substitutions
@@ -74,6 +75,7 @@ resource "google_cloudbuild_trigger" "deploy_to_prod_pipeline" {
   }
   substitutions = {
     _PROD_PROJECT_ID             = var.prod_project_id
+    _ARTIFACT_REGISTRY_REPO_NAME = var.artifact_registry_repo_name
     _CLOUD_RUN_APP_SA_NAME       = var.cloud_run_app_sa_name
     _REGION                      = var.region
 

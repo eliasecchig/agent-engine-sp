@@ -1,32 +1,79 @@
 steps:
-  - name: "python:3.11"
-    id: install-dependencies
-    entrypoint: /bin/bash
+  #   # Build and Push
+  - name: "gcr.io/cloud-builders/docker"
     args:
-      - "-c"
-      - |
-        pip install uv --user && python -m uv sync
+      [
+        "build",
+        "-t",
+        "$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO_NAME/$_CONTAINER_NAME",
+        ".",
+      ]
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO_NAME/$_CONTAINER_NAME",
+      ]
 
-  - name: "python:3.11"
+  # Deploy to Staging
+  - name: "gcr.io/cloud-builders/gcloud"
     id: deploy-staging
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "genai-app-sample"
+      - "--image"
+      - "$_REGION-docker.pkg.dev/$PROJECT_ID/$_ARTIFACT_REGISTRY_REPO_NAME/$_CONTAINER_NAME"
+      - "--region"
+      - "${_REGION}"
+      - "--project"
+      - "${_STAGING_PROJECT_ID}"
+      - "--min-instances"
+      - "1"
+      - "--no-cpu-throttling"
+      - "--cpu"
+      - "4"
+      - "--memory"
+      - "4Gi"
+      - "--concurrency"
+      - "40"
+      - "--service-account"
+      - "${_CLOUD_RUN_APP_SA_NAME}@${_STAGING_PROJECT_ID}.iam.gserviceaccount.com"
+      - "--set-env-vars"
+      - "COMMIT_SHA=${COMMIT_SHA}"
+
+  # Fetch Staging Service URL
+  - name: "gcr.io/cloud-builders/gcloud"
+    id: fetch-staging-url
     entrypoint: /bin/bash
     args:
       - "-c"
       - |
-        python -m uv run app/agent_engine_app.py
-    env:
-    - 'PROJECT_ID=$_STAGING_PROJECT_ID'
-    - 'LOCATION=$_REGION'
+        echo $(gcloud run services describe genai-app-sample \
+        --region ${_REGION} --project ${_STAGING_PROJECT_ID} --format="value(status.url)") > staging_url.txt
+
+  # Fetch ID Token
+  - name: gcr.io/cloud-builders/gcloud
+    id: fetch-id-token
+    entrypoint: /bin/bash
+    args:
+      - "-c"
+      - |
+        echo $(gcloud auth print-identity-token -q) > id_token.txt
 
   # Load Testing
-  - name: "python:3.11"
+  - name: "python:3.10"
     id: load_test
     entrypoint: /bin/bash
     args:
       - "-c"
       - |
-        python -m uv add locust==2.32.6
-        python -m uv run locust -f tests/load_test/load_test.py \
+        export _ID_TOKEN=$(cat id_token.txt)
+        export _STAGING_URL=$(cat staging_url.txt)
+        pip install locust==2.31.1
+        python -m locust -f tests/load_test/load_test.py \
+        -H $$_STAGING_URL \
         --headless \
         -t 30s -u 10 -r 0.5 \
         --csv=tests/load_test/.results/results \
@@ -78,10 +125,13 @@ steps:
 
 substitutions:
   _STAGING_PROJECT_ID: YOUR_STAGING_PROJECT_ID # Replace with your staging project ID
-  _BUCKET_NAME_LOAD_TEST_RESULTS: ${PROJECT_ID}-cicd-load-test-results # Replace with your GCS bucket name
+  _BUCKET_NAME_LOAD_TEST_RESULTS: YOUR_CICD_PROJECT_ID-cicd-load-test-results # Replace with your GCS bucket name
+  _CONTAINER_NAME: genai-app-sample
+  _ARTIFACT_REGISTRY_REPO_NAME: genai-containers
+  _CLOUD_RUN_APP_SA_NAME: genai-app-sample-cr-sa
   _REGION: us-central1
 
 options:
   substitutionOption: ALLOW_LOOSE
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
-# serviceAccount: projects/${PROJECT_ID}/serviceAccounts/cicd-runner@${PROJECT_ID}.iam.gserviceaccount.com
+serviceAccount: projects/${PROJECT_ID}/serviceAccounts/cicd-runner@${PROJECT_ID}.iam.gserviceaccount.com

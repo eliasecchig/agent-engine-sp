@@ -1,29 +1,27 @@
 steps:
-  # Install uv package manager and sync dependencies
-  - name: "python:3.11"
+  - name: "python:3.10"
     id: install-dependencies
     entrypoint: /bin/bash
     args:
       - "-c"
       - |
-        pip install uv --user &&  python -m uv sync
+        pip install poetry==1.8.3 --user && python -m poetry install
 
-  # Run unit tests using pytest
-  - name: "python:3.11"
+  - name: "python:3.10"
     id: unit-tests
     entrypoint: /bin/bash
     args:
       - "-c"
       - |
-        python -m uv run pytest tests/unit
+        python -m poetry run pytest tests/unit
 
   # Run integration tests
-  - name: "python:3.11"
+  - name: "python:3.10"
     id: integration-tests
     entrypoint: /bin/bash
     args:
       - "-c"
       - |
-        python -m uv run pytest tests/integration
+        python -m poetry run pytest tests/integration
 options:
   logging: CLOUD_LOGGING_ONLY

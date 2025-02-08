@@ -1,3 +1,16 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # pylint: disable=E0611
 
 from functools import partial
@@ -6,14 +19,14 @@ from typing import Any, Dict, List
 import uuid
 
 from langchain_core.messages import HumanMessage
-from frontend.side_bar import SideBar
+from side_bar import SideBar
 import streamlit as st
 from streamlit_feedback import streamlit_feedback
-from frontend.style.app_markdown import MARKDOWN_STR
-from frontend.utils.local_chat_history import LocalChatMessageHistory
-from frontend.utils.message_editing import MessageEditing
-from frontend.utils.multimodal_utils import format_content, get_parts_from_files
-from frontend.utils.stream_handler import Client, StreamHandler, get_chain_response
+from style.app_markdown import MARKDOWN_STR
+from utils.local_chat_history import LocalChatMessageHistory
+from utils.message_editing import MessageEditing
+from utils.multimodal_utils import format_content, get_parts_from_files
+from utils.stream_handler import Client, StreamHandler, get_chain_response
 
 USER = "my_user"
 EMPTY_CHAT_NAME = "Empty chat"
@@ -52,25 +65,19 @@ def initialize_session_state() -> None:
             "messages": [],
         }
 
+
 def display_messages() -> None:
     """Display all messages in the current chat session."""
     messages = st.session_state.user_chats[st.session_state["session_id"]]["messages"]
-    tool_calls_map = {}  # Map tool_call_id to tool call input
-    
+    tool_call_input = None
     for i, message in enumerate(messages):
         if message["type"] in ["ai", "human"] and message["content"]:
             display_chat_message(message, i)
         elif "tool_calls" in message and message["tool_calls"]:
-            # Store each tool call input mapped by its ID
-            for tool_call in message["tool_calls"]:
-                tool_calls_map[tool_call["id"]] = tool_call
-        elif message["type"] == "tool":
-            # Look up the corresponding tool call input by ID
-            tool_call_id = message["tool_call_id"]
-            if tool_call_id in tool_calls_map:
-                display_tool_output(tool_calls_map[tool_call_id], message)
-            else:
-                st.error(f"Could not find tool call input for ID: {tool_call_id}")
+            tool_call_input = handle_tool_call(message)
+        elif message["type"] == "tool" and tool_call_input is not None:
+            display_tool_output(tool_call_input, message)
+            tool_call_input = None
         else:
             st.error(f"Unexpected message type: {message['type']}")
             st.write("Full messages list:", messages)
@@ -126,11 +133,11 @@ def display_message_buttons(
         )
 
 
-# def handle_tool_call(message: Dict[str, Any]) -> Dict[str, Any]:
-#     """Process a tool call message and return the first tool call."""
-#     if len(message["tool_calls"]) > 1:
-#         raise ValueError("Expected only one tool call, but found multiple.")
-#     return message["tool_calls"][0]
+def handle_tool_call(message: Dict[str, Any]) -> Dict[str, Any]:
+    """Process a tool call message and return the first tool call."""
+    if len(message["tool_calls"]) > 1:
+        raise ValueError("Expected only one tool call, but found multiple.")
+    return message["tool_calls"][0]
 
 
 def display_tool_output(
@@ -140,8 +147,8 @@ def display_tool_output(
     tool_expander = st.expander(label="Tool Calls:", expanded=False)
     with tool_expander:
         msg = (
-            f"\n\nEnding tool: `{tool_call_input}` with\n **args:**\n"
-            f"```\n{json.dumps(tool_call_input, indent=2)}\n```\n"
+            f"\n\nEnding tool: `{tool_call_input['name']}` with\n **args:**\n"
+            f"```\n{json.dumps(tool_call_input['args'], indent=2)}\n```\n"
             f"\n\n**output:**\n "
             f"```\n{json.dumps(tool_call_output, indent=2)}\n```"
         )
@@ -166,8 +173,8 @@ def handle_user_input(side_bar: SideBar) -> None:
 
         display_user_input(parts)
         generate_ai_response(
-            remote_agent_engine_id=side_bar.remote_agent_engine_id,
-            agent_callable_path=side_bar.agent_callable_path
+            url_input_field=side_bar.url_input_field,
+            should_authenticate_request=side_bar.should_authenticate_request,
         )
         update_chat_title()
         if len(parts) > 1:
@@ -184,8 +191,7 @@ def display_user_input(parts: List[Dict[str, Any]]) -> None:
 
 
 def generate_ai_response(
-    remote_agent_engine_id: str,
-    agent_callable_path: str
+    url_input_field: str, should_authenticate_request: bool
 ) -> None:
     """Generate and display the AI's response to the user's input."""
     ai_message = st.chat_message("ai")
@@ -193,8 +199,7 @@ def generate_ai_response(
         status = st.status("Generating answer🤖")
         stream_handler = StreamHandler(st=st)
         client = Client(
-            remote_agent_engine_id=remote_agent_engine_id,
-            agent_callable_path=agent_callable_path
+            url=url_input_field, authenticate_request=should_authenticate_request
         )
         get_chain_response(st=st, client=client, stream_handler=stream_handler)
         status.update(label="Finished!", state="complete", expanded=False)
@@ -224,8 +229,8 @@ def display_feedback(side_bar: SideBar) -> None:
         )
         if feedback is not None:
             client = Client(
-                agent_callable_path=side_bar.agent_callable_path,
-                remote_agent_engine_id=side_bar.remote_agent_engine_id,
+                url=side_bar.url_input_field,
+                authenticate_request=side_bar.should_authenticate_request,
             )
             client.log_feedback(
                 feedback_dict=feedback,

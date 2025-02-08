@@ -45,8 +45,14 @@ variable "feedback_sink_name" {
   default     = "feedback_logs_genai_app_sample"
 }
 
-variable "agentengine_sa_roles" {
-  description = "List of roles to assign to the Agent Engine app service account"
+variable "cloud_run_app_sa_name" {
+  description = "Service account name to be used for the Cloud Run service"
+  type        = string
+  default     = "genai-app-sample-cr-sa"
+}
+
+variable "cloud_run_app_roles" {
+  description = "List of roles to assign to the Cloud Run app service account"
   type        = list(string)
   default = [
     "roles/aiplatform.user",

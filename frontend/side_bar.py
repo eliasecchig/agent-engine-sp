@@ -1,29 +1,33 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # pylint: disable=W0201, E0611
 
 import os
 from typing import Any
 import uuid
-import json
-import google.auth
-from frontend.utils.chat_utils import save_chat
-from frontend.utils.multimodal_utils import (
+
+from utils.chat_utils import save_chat
+from utils.multimodal_utils import (
     HELP_GCS_CHECKBOX,
     HELP_MESSAGE_MULTIMODALITY,
     upload_files_to_gcs,
 )
 
-
 EMPTY_CHAT_NAME = "Empty chat"
 NUM_CHAT_IN_RECENT = 3
+DEFAULT_BASE_URL = "http://localhost:8000/"
 
-
-DEFAULT_REMOTE_AGENT_ENGINE_ID = "N/A"
-if os.path.exists("deployment_metadata.json"):
-    with open("deployment_metadata.json") as f:
-        DEFAULT_REMOTE_AGENT_ENGINE_ID = json.load(f)["remote_agent_engine_id"]
-DEFAULT_AGENT_CALLABLE_PATH = "app.agent_engine_app.AgentEngineApp"
-
-_, project_id = google.auth.default()
 
 class SideBar:
     """Manages the sidebar components of the Streamlit application."""
@@ -40,25 +44,18 @@ class SideBar:
     def init_side_bar(self) -> None:
         """Initialize and render the sidebar components."""
         with self.st.sidebar:
-            # Only one of agent path or engine ID should be set
-            use_agent_path = self.st.selectbox(
-                "Select Agent Type",
-                ["Local Agent", "Remote Engine ID"]
+            self.url_input_field = self.st.text_input(
+                label="Service URL",
+                value=os.environ.get("SERVICE_URL", DEFAULT_BASE_URL),
             )
-            
-            if use_agent_path == "Local Agent":
-                self.agent_callable_path = self.st.text_input(
-                    label="Agent Callable Path",
-                    value=os.environ.get("AGENT_CALLABLE_PATH", DEFAULT_AGENT_CALLABLE_PATH),
-                )
-                self.remote_agent_engine_id = None
-            else:
-                self.remote_agent_engine_id = self.st.text_input(
-                    label="Remote Agent Engine ID", 
-                    value=os.environ.get("REMOTE_AGENT_ENGINE_ID", DEFAULT_REMOTE_AGENT_ENGINE_ID),
-                )
-                self.agent_callable_path = None
-
+            self.should_authenticate_request = self.st.checkbox(
+                label="Authenticate request",
+                value=False,
+                help="If checked, any request to the server will contain an"
+                "Identity token to allow authentication. "
+                "See the Cloud Run documentation to know more about authentication:"
+                "https://cloud.google.com/run/docs/authenticating/service-to-service",
+            )
             col1, col2, col3 = self.st.columns(3)
             with col1:
                 if self.st.button("+ New chat"):

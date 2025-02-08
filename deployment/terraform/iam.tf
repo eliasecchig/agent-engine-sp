@@ -30,27 +30,32 @@ resource "google_project_iam_member" "other_projects_roles" {
   member     = "serviceAccount:${resource.google_service_account.cicd_runner_sa.email}"
   depends_on = [resource.google_project_service.cicd_services, resource.google_project_service.shared_services]
 }
-resource "google_project_service_identity" "vertex_sa" {
+
+# 3. Allow Cloud Run service SA to pull containers stored in the CICD project
+resource "google_project_iam_member" "cicd_run_invoker_artifact_registry_reader" {
   for_each = local.deploy_project_ids
-  provider = google-beta
-  project  = each.value
-  service  = "aiplatform.googleapis.com"
+  project  = var.cicd_runner_project_id
+
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:service-${data.google_project.projects[each.key].number}@serverless-robot-prod.iam.gserviceaccount.com"
+  depends_on = [resource.google_project_service.cicd_services, resource.google_project_service.shared_services]
+
 }
 
-# Grant required permissions to Vertex AI service account
-resource "google_project_iam_member" "vertex_ai_sa_permissions" {
+# 4. Grant Cloud Run SA the required permissions to run the application
+resource "google_project_iam_member" "cloud_run_app_sa_roles" {
   for_each = {
-    for pair in setproduct(keys(local.deploy_project_ids), var.agentengine_sa_roles) :
-    "${pair[0]}_${pair[1]}" => {
+    for pair in setproduct(keys(local.deploy_project_ids), var.cloud_run_app_roles) :
+    join(",", pair) => {
       project = local.deploy_project_ids[pair[0]]
-      role = pair[1]
+      role    = pair[1]
     }
   }
 
-  project     = each.value.project
-  role        = each.value.role
-  member      = "serviceAccount:${google_project_service_identity.vertex_sa[split("_", each.key)[0]].email}"
-  depends_on  = [resource.google_project_service.shared_services]
+  project    = each.value.project
+  role       = each.value.role
+  member     = "serviceAccount:${google_service_account.cloud_run_app_sa[split(",", each.key)[0]].email}"
+  depends_on = [resource.google_project_service.cicd_services, resource.google_project_service.shared_services]
 }
 
 # Special assignment: Allow the CICD SA to create tokens

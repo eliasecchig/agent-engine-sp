@@ -17,4 +17,3 @@ resource "google_project_service" "shared_services" {
   service            = each.value.service
   disable_on_destroy = false
 }
-
