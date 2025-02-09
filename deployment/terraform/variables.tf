@@ -71,14 +71,29 @@ variable "cicd_runner_sa_name" {
   default     = "cicd-runner"
 }
 
+variable "cloud_run_app_sa_name" {
+  description = "Service account name to be used for the Cloud Run service"
+  type        = string
+  default     = "genai-app-sample-cr-sa"
+}
+
 variable "suffix_bucket_name_load_test_results" {
   description = "Suffix Name of the bucket that will be used to store the results of the load test. Prefix will be project id."
   type        = string
   default     = "cicd-load-test-results"
 }
 
-variable "agentengine_sa_roles" {
-  description = "List of roles to assign to the Agent Engine service account"
+
+variable "artifact_registry_repo_name" {
+  description = "Name of the Artifact registry repository to be used to push containers"
+  type        = string
+  default     = "genai-containers"
+}
+
+
+
+variable "cloud_run_app_roles" {
+  description = "List of roles to assign to the Cloud Run app service account"
   type        = list(string)
   default = [
     "roles/aiplatform.user",
@@ -94,10 +109,10 @@ variable "cicd_roles" {
   type        = list(string)
   default = [
     "roles/storage.admin",
+    "roles/run.invoker",
     "roles/aiplatform.user",
     "roles/discoveryengine.editor",
     "roles/logging.logWriter",
-    "roles/cloudtrace.agent",
     "roles/artifactregistry.writer",
     "roles/cloudbuild.builds.builder"
   ]
@@ -107,6 +122,7 @@ variable "cicd_sa_deployment_required_roles" {
   description = "List of roles to assign to the CICD runner service account for the Staging and Prod projects."
   type        = list(string)
   default = [
+    "roles/run.developer",
     "roles/iam.serviceAccountUser",
     "roles/aiplatform.user",
     "roles/storage.admin"

@@ -1,27 +1,26 @@
+# Copyright 2024 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 # pylint: disable=R0801
+
 import json
-import logging
+import os
 import time
-import vertexai
-from vertexai.preview import reasoning_engines
-from locust import User, between, task
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# Initialize Vertex AI and load agent config
-vertexai.init()
-with open("deployment_metadata.json") as f:
-    remote_agent_engine_id = json.load(f)["remote_agent_engine_id"]
-logger.info("Using remote agent engine ID: %s", remote_agent_engine_id)
-agent = reasoning_engines.ReasoningEngine(remote_agent_engine_id)
+from locust import HttpUser, between, task
 
 
-class ChatStreamUser(User):
+class ChatStreamUser(HttpUser):
     """Simulates a user interacting with the chat stream API."""
 
     wait_time = between(1, 3)  # Wait 1-3 seconds between tasks
@@ -29,20 +28,58 @@ class ChatStreamUser(User):
     @task
     def chat_stream(self) -> None:
         """Simulates a chat stream interaction."""
-        inputs = {
-            "messages": [
-                ("user", "What is the exchange rate from US dollars to Swedish currency?")
-            ]
+        headers = {"Content-Type": "application/json"}
+        if os.environ.get("_ID_TOKEN"):
+            headers["Authorization"] = f'Bearer {os.environ["_ID_TOKEN"]}'
+
+        data = {
+            "input": {
+                "messages": [
+                    {"type": "human", "content": "Hello, AI!"},
+                    {"type": "ai", "content": "Hello!"},
+                    {"type": "human", "content": "Who are you?"},
+                ],
+                "user_id": "test-user",
+                "session_id": "test-session",
+            }
         }
-        
+
         start_time = time.time()
-        response = agent.query(input=inputs)
-        
-        # Register stream completed
-        self.environment.events.request.fire(
-            request_type="STREAM_END",
-            name="reasoning_engine_stream_end", 
-            response_time=(time.time() - start_time) * 1000,
-            response_length=len(str(response)),
-            exception=None
-        )
+
+        with self.client.post(
+            "/stream_events",
+            headers=headers,
+            json=data,
+            catch_response=True,
+            name="/stream_events first event",
+            stream=True,
+        ) as response:
+            if response.status_code == 200:
+                events = []
+                for line in response.iter_lines():
+                    if line:
+                        events.append(json.loads(line))
+                        if events[-1]["event"] == "end":
+                            break
+
+                end_time = time.time()
+                total_time = end_time - start_time
+
+                if (
+                    len(events) > 2
+                    and events[0]["event"] == "metadata"
+                    and events[-1]["event"] == "end"
+                ):
+                    response.success()
+                    self.environment.events.request.fire(
+                        request_type="POST",
+                        name="/stream_events end",
+                        response_time=total_time * 1000,  # Convert to milliseconds
+                        response_length=len(json.dumps(events)),
+                        response=response,
+                        context={},
+                    )
+                else:
+                    response.failure("Unexpected response structure")
+            else:
+                response.failure(f"Unexpected status code: {response.status_code}")
